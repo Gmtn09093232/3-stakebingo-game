@@ -8,7 +8,6 @@
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
     <style>
-        /* (all styles unchanged – same as previous version) */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
         body { min-height: 100vh; background: #f5f3f0; background-image: radial-gradient(circle at 20% 30%, rgba(0,0,0,0.02) 2%, transparent 2.5%); background-size: 40px 40px; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; padding: 12px; display: flex; align-items: center; justify-content: center; }
         .page { max-width: 600px; width: 100%; margin: 0 auto; background: rgba(255, 255, 248, 0.96); border-radius: 48px; padding: 20px 18px 24px; box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255,255,255,0.9); border: 1px solid rgba(0, 0, 0, 0.05); backdrop-filter: blur(2px); }
@@ -111,7 +110,7 @@
     </style>
 </head>
 <body>
-    <!-- Deposit/Withdraw/Rules Modals (same as before) -->
+    <!-- Deposit/Withdraw/Rules Modals -->
     <div id="depositTypeModal" class="modal"><div class="modal-content"><div class="bank-header"><span class="bank-icon">🏦</span><div><div class="bank-title">Deposit</div><div class="bank-sub">Choose payment method</div></div></div><button class="type-btn" data-type="telebirr"><span>📱</span> Telebirr</button><button class="type-btn" data-type="cbebirr"><span>🏦</span> CBE Birr</button><button class="type-btn" data-type="mpesa"><span>📲</span> M-Pesa</button><button id="closeDepositTypeBtn" class="type-btn" style="background:#f1f5f9;">Cancel</button></div></div>
     <div id="depositDetailsModal" class="modal"><div class="modal-content"><div class="bank-header"><span class="bank-icon">💸</span><div><div class="bank-title" id="depositDetailsTitle">Deposit via Telebirr</div><div class="bank-sub">Send payment & attach proof</div></div></div><div class="account-card"><div class="account-label">RECIPIENT ACCOUNT</div><div class="account-number" id="depositAccountNumber">0924839730</div><div class="account-label" style="margin-top:8px;">ACCOUNT NAME</div><div class="account-number" style="font-size:1rem;">DOT BINGO OFFICIAL</div></div><div class="input-group"><label>📞 Your Mobile Number</label><input type="tel" id="depositPlayerPhone" placeholder="" required></div><div class="input-group"><label>💰 Amount (ETB)</label><input type="number" id="depositAmount" placeholder="Min 10 ETB" min="10" step="any"></div><div class="input-group"><label>🧾 Transaction ID (optional)</label><input type="text" id="depositRef" placeholder="e.g., TRX123456"></div><div class="input-group"><label class="file-label" for="depositProofImage">📎 Attach Screenshot / Proof</label><input type="file" id="depositProofImage" accept="image/*" capture="environment" style="display:none;"></div><div class="transaction-summary">💡 After sending, submit proof. Funds added after manual verification.</div><div class="modal-buttons"><button id="submitDepositBtn" class="btn-primary">✔ Submit Request</button><button id="backDepositBtn" class="btn-secondary">← Back</button></div></div></div>
     <div id="withdrawTypeModal" class="modal"><div class="modal-content"><div class="bank-header"><span class="bank-icon">💰</span><div><div class="bank-title">Withdraw Funds</div><div class="bank-sub">Select withdrawal method</div></div></div><button class="type-btn" data-type="telebirr"><span>📱</span> Telebirr</button><button class="type-btn" data-type="cbebirr"><span>🏦</span> CBE Birr</button><button class="type-btn" data-type="mpesa"><span>📲</span> M-Pesa </button><button id="closeWithdrawTypeBtn" class="type-btn">Cancel</button></div></div>
@@ -181,9 +180,9 @@
         let voiceEnabled = true;
         let hasSelectedCard = false;
         let returnToLobbyTimeout = null;
-        let currentCalledNumbers = []; // store called numbers for display
+        let currentCalledNumbers = [];
 
-        const amharicNumbers = { 1:"አንድ",2:"ሁለት",3:"ሶስት",4:"አራት",5:"አምስት",6:"ስድስት",7:"ሰባት",8:"ስምንት",9:"ዘጠኝ",10:"አስር",11:"አስራ አንድ",12:"አስራ ሁለት",13:"አስራ ሶስት",14:"አስራ አራት",15:"አስራ አምስት",16:"አስራ ስድስት",17:"አስራ ሰባት",18:"አስራ ስምንት",19:"አስራ ዘጠኝ",20:"ሃያ",21:"ሃያ አንድ",22:"ሃያ ሁለት",23:"ሃያ ሶስት",24:"ሃያ አራት",25:"ሃያ አምስት",26:"ሃያ ስድስት",27:"ሃያ ሰባት",28:"ሃያ ስምንት",29:"ሃያ ዘጠኝ",30:"ሰላሳ",31:"ሰላሳ አንድ",32:"ሰላሳ ሁለት",33:"ሰላሳ ሶስት",34:"ሰላሳ አራት",35:"ሰላሳ አምስት",36:"ሰላሳ ስድስት",37:"ሰላሳ ሰባት",38:"ሰላሳ ስምንት",39:"ሰላሳ ዘጠኝ",40:"አርባ",41:"አርባ አንድ",42:"አርባ ሁለት",43:"አርባ ሶስት",44:"አርባ አራት",45:"አርባ አምስት",46:"አርባ ስድስት",47:"አርባ ሰባት",48:"አርባ ስምንት",49:"አርባ ዘጠኝ",50:"ሃምሳ",51:"ሃምሳ አንድ",52:"ሃምሳ ሁለት",53:"ሃምሳ ሶስት",54:"ሃምሳ አራት",55:"ሃምሳ አምስት",56:"ሃምሳ ስድስት",57:"ሃምሳ ሰባት",58:"ሃምሳ ስምንት",59:"ሃምሳ ዘጠኝ",60:"ስልሳ",61:"ስልሳ አንድ",62:"ስልሳ ሁለት",63:"ስልሳ ሶስት",64:"ስልሳ አራት",65:"ስልሳ አምስት",66:"ስልሳ ስድስት",67:"ስልሳ ሰባት",68:"ስልሳ ስምንት",69:"ስልሳ ዘጠኝ",70:"ሰባ",71:"ሰባ አንድ",72:"ሰባ ሁለት",73:"ሰባ ሶስት",74:"ሰባ አራት",75:"ሰባ አምስት"};
+        const amharicNumbers = { 1:"አንድ",2:"ሁለት",3:"ሶስት",4:"አራት",5:"አምስት",6:"ስድስት",7:"ሰባት",8:"ስምንት",9:"ዘጠኝ",10:"አስር",11:"አስራ አንድ",12:"አስራ ሁለት",13:"አስራ ሶስት",14:"አስራ አራት",15:"አስራ አምስት",16:"አስራ ስድስት",17:"አስራ ሰባት",18:"አስራ ስምንት",19:"አስራ ዘጠኝ",20:"ሃያ",21:"ሃያ አንድ",22:"ሃያ ሁለት",23:"ሃያ ሶስት",24:"ሃያ አራት",25:"ሃያ አምስት",26:"ሃያ ስድስት",27:"ሃያ ሰባት",28:"ሃያ ስምንት",29:"ሃያ ዘጠኝ",30:"ሰላሳ",31:"ሰላሳ አንድ",32:"ሰላሳ ሁለት",33:"ሰላሳ ሶስት",34:"ሰላሳ አራት",35:"ሰላሳ አምስት",36:"ሰላሳ ስድስት",37:"ሰላሳ ሰባት",38:"ሰላሳ ስምንት",39:"ሰላሳ ዘጠኝ",40:"አርባ",41:"አርባ አንድ",42:"አርባ ሁለት",43:"አርባ ሶስት",44:"አርባ አራት",45:"አርባ አምስት",46:"አርባ ስድስት",47:"አርባ ሰባት",48:"አርባ ስምንት",49:"አርባ ዘጠኝ",50:"ሃምሳ",51:"ሃምሳ አንድ",52:"ሃምሳ ሁለት",53:"ሃምሳ ሶስት",54:"ሃምሳ አራት",55:"ሃምሳ አምስት",56:"ሃምሳ ስድስት",57:"ሃምሳ ሰባት",58:"ሃምሳ ስምንት",59:"ሃምሳ ዘጠኝ",60:"ስልሳ",61:"ስልሳ አንድ",62:"ስልሳ ሁለት",63:"ስልሳ ሶስት",64:"ስልሳ አራት",65:"ስልሳ አምስት",66:"ስልሳ ስድስት",67:"ስልሳ ሰባት",68:"ስልሳ ስምንት",69:"ስልሳ ዘጠኝ",70:"ሰባ",71:"ሰባ አንድ",72:"ሰባ ሁለት",73:"ሰባ ሶስት",74:"ሰባ አራት",75:"ሰባ አምስቘ"};
         function getAmharicLetter(letter) { const map = { 'B': 'ቢ', 'I': 'አይ', 'N': 'ኤን', 'G': 'ጂ', 'O': 'ኦ' }; return map[letter] || letter; }
         function speakNumberAmharic(number) { if(!voiceEnabled)return; const letter=formatCall(number).split('-')[0]; const amharicLetter=getAmharicLetter(letter); const amharicNum=amharicNumbers[number]; if(!amharicNum)return; const phrase=`${amharicLetter} ${amharicNum}`; const utterance=new SpeechSynthesisUtterance(phrase); utterance.lang='am-ET'; utterance.rate=0.9; window.speechSynthesis.cancel(); window.speechSynthesis.speak(utterance); }
         function initVoiceToggle() { const stored=localStorage.getItem('bingo_voice_enabled'); if(stored!==null) voiceEnabled=stored==='true'; const toggle=document.getElementById('voiceToggle'); const toggleGame=document.getElementById('voiceToggleGame'); if(toggle) toggle.checked=voiceEnabled; if(toggleGame) toggleGame.checked=voiceEnabled; const updateToggle=(e)=>{ voiceEnabled=e.target.checked; localStorage.setItem('bingo_voice_enabled',voiceEnabled); if(toggle&&toggle.checked!==voiceEnabled) toggle.checked=voiceEnabled; if(toggleGame&&toggleGame.checked!==voiceEnabled) toggleGame.checked=voiceEnabled; }; if(toggle) toggle.addEventListener('change',updateToggle); if(toggleGame) toggleGame.addEventListener('change',updateToggle); }
@@ -197,19 +196,61 @@
         const lobbyTimerEl = document.getElementById('lobbyTimer'), playersCountEl = document.getElementById('playersCount'), lobbyBalanceEl = document.getElementById('lobbyBalance'), gamePlayersCountEl = document.getElementById('gamePlayersCount'), winningBalanceEl = document.getElementById('winningBalance'), currentCallEl = document.getElementById('currentCall'), calledListEl = document.getElementById('calledList'), selectedNumberEl = document.getElementById('selectedNumber'), numberGrid = document.getElementById('numberGrid'), lobbyCardPreview = document.getElementById('lobbyCardPreview');
         function syncBalance(v) { currentBalance = v; lobbyBalanceEl.innerText = v; if(document.getElementById('walletBalancePage')) document.getElementById('walletBalancePage').innerText = v; if(document.getElementById('profileBalancePage')) document.getElementById('profileBalancePage').innerText = v; if(document.getElementById('gameBalanceDisplay')) document.getElementById('gameBalanceDisplay').innerText = v; if(document.getElementById('stakeBalance')) document.getElementById('stakeBalance').innerText = v + ' ETB'; }
         function renderCard(card, containerId, clickable) { const cont = document.getElementById(containerId); if(!cont) return; cont.innerHTML = ''; const table = document.createElement('table'); table.style.borderCollapse='separate'; table.style.borderSpacing='10px'; const thead = document.createElement('thead'); const hr = document.createElement('tr'); ['B','I','N','G','O'].forEach(l=>{let th=document.createElement('th'); th.textContent=l; hr.appendChild(th);}); thead.appendChild(hr); table.appendChild(thead); const tbody = document.createElement('tbody'); for(let r=0;r<5;r++){ const tr=document.createElement('tr'); for(let c=0;c<5;c++){ const val=card[r][c]; const td=document.createElement('td'); td.textContent=val==='FREE'?'★':val; if(val==='FREE') td.classList.add('free'); if(markedNumbers.includes(val)) td.classList.add('marked'); if(clickable && val!=='FREE'){ td.style.cursor='pointer'; td.onclick=()=>{ if(isGameActive && socket) socket.emit('markNumber', { stake: currentGameStake, number: val }); };} tr.appendChild(td); } tbody.appendChild(tr); } table.appendChild(tbody); cont.appendChild(table); }
-        function buildNumberGrid() { numberGrid.innerHTML=''; for(let i=1;i<=100;i++){ const cell=document.createElement('div'); cell.className='grid-cell'; cell.dataset.number=i; cell.textContent=i; if(takenNumbers.has(i)) cell.classList.add('taken'); else cell.onclick=()=>{ if(!isGameActive && socket && !takenNumbers.has(i) && !hasSelectedCard) { socket.emit('selectCardNumber', { stake: currentGameStake, cardNumber: i }, (res) => { if (res && res.success) { hasSelectedCard = true; selectedCardNumber = i; selectedNumberEl.textContent = i; } else { alert(res.error || 'Failed to select card'); } }); } else if (hasSelectedCard) { alert('You already selected a card. Use "Random Card" to change.'); } }; numberGrid.appendChild(cell); } if(selectedCardNumber){ const sel=numberGrid.querySelector(`[data-number='${selectedCardNumber}']`); if(sel) sel.classList.add('selected'); } }
+        
+        function buildNumberGrid() { 
+            numberGrid.innerHTML=''; 
+            for(let i=1;i<=100;i++){ 
+                const cell=document.createElement('div'); 
+                cell.className='grid-cell'; 
+                cell.dataset.number=i; 
+                cell.textContent=i; 
+                if(takenNumbers.has(i)) { 
+                    cell.classList.add('taken'); 
+                } else { 
+                    cell.onclick=()=>{ 
+                        if(!isGameActive && socket && !takenNumbers.has(i)) { 
+                            // If already selected a card, use changeCardNumber; else selectCardNumber
+                            if (hasSelectedCard) {
+                                socket.emit('changeCardNumber', { stake: currentGameStake, cardNumber: i }, (res) => {
+                                    if (res && res.success) {
+                                        selectedCardNumber = i;
+                                        selectedNumberEl.textContent = i;
+                                        // Update card preview (will be updated via yourCard event)
+                                    } else {
+                                        alert(res.error || 'Failed to change card');
+                                    }
+                                });
+                            } else {
+                                socket.emit('selectCardNumber', { stake: currentGameStake, cardNumber: i }, (res) => {
+                                    if (res && res.success) {
+                                        hasSelectedCard = true;
+                                        selectedCardNumber = i;
+                                        selectedNumberEl.textContent = i;
+                                        // Update taken numbers and grid highlighting
+                                        if (currentRoomState && currentRoomState.takenNumbers) {
+                                            takenNumbers = new Set(currentRoomState.takenNumbers);
+                                            buildNumberGrid();
+                                        }
+                                    } else {
+                                        alert(res.error || 'Failed to select card');
+                                    }
+                                });
+                            }
+                        } else if (hasSelectedCard) {
+                            alert('You already selected a card. Use "Random Card" or click another number to change.');
+                        }
+                    }; 
+                }
+                numberGrid.appendChild(cell); 
+            } 
+            if(selectedCardNumber){ 
+                const sel=numberGrid.querySelector(`[data-number='${selectedCardNumber}']`); 
+                if(sel) sel.classList.add('selected'); 
+            } 
+        }
         function updateGridWithTakenNumbers(nums){ takenNumbers=new Set(nums); buildNumberGrid(); }
         function formatCall(n){ let l='B'; if(n>15) l='I'; if(n>30) l='N'; if(n>45) l='G'; if(n>60) l='O'; return `${l}-${n}`; }
-        function updateCalledHistory(calledNumbers) {
-            currentCalledNumbers = calledNumbers;
-            if (calledNumbers && calledNumbers.length) {
-                calledListEl.innerText = 'Called: ' + calledNumbers.map(n => formatCall(n)).join(', ');
-                currentCallEl.innerText = formatCall(calledNumbers[calledNumbers.length-1] || 0);
-            } else {
-                calledListEl.innerText = 'Called: —';
-                currentCallEl.innerText = '0 - 75';
-            }
-        }
+        function updateCalledHistory(calledNumbers) { currentCalledNumbers = calledNumbers; if (calledNumbers && calledNumbers.length) { calledListEl.innerText = 'Called: ' + calledNumbers.map(n => formatCall(n)).join(', '); currentCallEl.innerText = formatCall(calledNumbers[calledNumbers.length-1] || 0); } else { calledListEl.innerText = 'Called: —'; currentCallEl.innerText = '0 - 75'; } }
         function startLobbyTimer(endTimeMs) { clearInterval(lobbyTimerInterval); const updateTimer = () => { const remaining = Math.max(0, Math.floor((endTimeMs - Date.now()) / 1000)); lobbyTimerEl.textContent = remaining + 's'; if (remaining <= 0) { clearInterval(lobbyTimerInterval); if (currentMainPage === 'lobby' && !isGameActive) showGame(); } }; updateTimer(); lobbyTimerInterval = setInterval(updateTimer, 1000); }
         function showLobbyFromState(roomState) { 
             currentMainPage = 'lobby'; 
@@ -283,7 +324,7 @@
                     userCard = data.card;
                     markedNumbers = data.markedNumbers || [];
                     hasSelectedCard = true;
-                    // card number from card? we can infer but not needed for UI
+                    renderCard(userCard, 'lobbyCardPreview', false);
                 }
                 if (data.calledNumbers) {
                     updateCalledHistory(data.calledNumbers);
@@ -296,7 +337,6 @@
                     if (currentRoomState && currentRoomState.status === 'running') {
                         showGame();
                         renderCard(userCard, 'gameCard', true);
-                        // Update prize pool and players count from currentRoomState
                         if (currentRoomState.prizePool) winningBalanceEl.innerText = currentRoomState.prizePool;
                         if (currentRoomState.playersCount) gamePlayersCountEl.innerText = currentRoomState.playersCount;
                     }
@@ -347,7 +387,6 @@
                 const number = data.number; 
                 updateCalledHistory(data.calledNumbers);
                 speakNumberAmharic(number);
-                // No auto-mark – player taps manually
             }); 
             socket.on('markedNumbers', (nums) => { 
                 markedNumbers = nums; 
@@ -369,8 +408,38 @@
         function joinStake(stake) { if (!socket) { alert("Connecting... please wait"); return; } currentGameStake = stake; socket.emit('selectStake', { stake: stake }, (response) => { if (!response.success) alert(response.error || "Failed to join room"); }); }
         function leaveRoom() { if (socket) { socket.emit('leaveRoom', (res) => { if (res && res.success) { stakePage.classList.remove('hidden'); lobbyPage.classList.add('hidden'); currentMainPage = 'stake'; userCard = []; markedNumbers = []; selectedCardNumber = null; hasSelectedCard = false; currentCalledNumbers = []; updateCalledHistory([]); clearInterval(lobbyTimerInterval); if (returnToLobbyTimeout) clearTimeout(returnToLobbyTimeout); } else { alert('Error leaving room'); } }); } }
 
-        document.getElementById('randomCardBtn')?.addEventListener('click',()=>{ if(!isGameActive && socket && hasSelectedCard) { const freeNumbers = []; for(let i=1;i<=100;i++) if(!takenNumbers.has(i)) freeNumbers.push(i); if(freeNumbers.length === 0) { alert('No free card numbers'); return; } const randomNum = freeNumbers[Math.floor(Math.random() * freeNumbers.length)]; socket.emit('selectCardNumber', { stake: currentGameStake, cardNumber: randomNum }, (res) => { if (res && res.success) { selectedCardNumber = randomNum; selectedNumberEl.textContent = randomNum; } else { alert(res.error || 'Failed to change card'); } }); } else if (!hasSelectedCard) { alert('First select a card number'); } });
-        document.getElementById('bingoBtn')?.addEventListener('click',()=>{ if(socket && isGameActive) socket.emit('claimBingo'); });
+        // Random Card button: uses changeCardNumber if already selected
+        document.getElementById('randomCardBtn')?.addEventListener('click',()=>{
+            if(!isGameActive && socket) { 
+                const freeNumbers = []; 
+                for(let i=1;i<=100;i++) if(!takenNumbers.has(i)) freeNumbers.push(i); 
+                if(freeNumbers.length === 0) { alert('No free card numbers'); return; } 
+                const randomNum = freeNumbers[Math.floor(Math.random() * freeNumbers.length)]; 
+                if (hasSelectedCard) {
+                    socket.emit('changeCardNumber', { stake: currentGameStake, cardNumber: randomNum }, (res) => { 
+                        if (res && res.success) { 
+                            selectedCardNumber = randomNum; 
+                            selectedNumberEl.textContent = randomNum; 
+                        } else { 
+                            alert(res.error || 'Failed to change card'); 
+                        } 
+                    });
+                } else {
+                    socket.emit('selectCardNumber', { stake: currentGameStake, cardNumber: randomNum }, (res) => { 
+                        if (res && res.success) { 
+                            hasSelectedCard = true;
+                            selectedCardNumber = randomNum; 
+                            selectedNumberEl.textContent = randomNum; 
+                        } else { 
+                            alert(res.error || 'Failed to select card'); 
+                        } 
+                    });
+                }
+            } else if (!hasSelectedCard) { 
+                alert('First select a stake and join room'); 
+            }
+        });
+        document.getElementById('bingoBtn')?.addEventListener('click',()=>{ if(socket && isGameActive) socket.emit('claimBingo', { stake: currentGameStake }, (res) => { if (!res.success) alert(res.message || 'Invalid bingo'); }); });
         document.querySelectorAll('.tab-btn').forEach(btn=>{ btn.addEventListener('click',()=>{ const page=btn.getAttribute('data-page'); clearInterval(lobbyTimerInterval); if(page==='lobby'){ if(currentMainPage==='lobby') showLobbyFromState(currentRoomState); else showGame(); } else{ if(currentMainPage==='lobby') lobbyPage.classList.add('hidden'); else gamePage.classList.add('hidden'); if(page==='history') historyPage.classList.remove('hidden'); else if(page==='wallet'){ walletPage.classList.remove('hidden'); syncBalance(currentBalance); } else if(page==='profile'){ profilePage.classList.remove('hidden'); syncBalance(currentBalance); updateStatsUI(); } } }); });
         document.getElementById('backFromHistoryBtn')?.addEventListener('click',() => goBackToMain());
         document.getElementById('backFromWalletBtn')?.addEventListener('click',() => goBackToMain());
