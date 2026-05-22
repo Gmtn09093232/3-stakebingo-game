@@ -22,6 +22,11 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+const cors = require('cors');
+app.use(cors({
+    origin: 'https://3-stakebingo-game.pages.dev', // or your actual static domain
+    credentials: true
+}));
 
 // ---------- Supabase ----------
 console.log('Connecting to Supabase...');
