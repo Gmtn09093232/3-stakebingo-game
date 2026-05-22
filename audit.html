@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📋 DOT BINGO – Audit Log Viewer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        body {
+            background: #0f172a;
+            margin: 0;
+            padding: 24px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .login-card, .audit-panel {
+            background: #1e293b;
+            border-radius: 32px;
+            padding: 24px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.3);
+            color: #e2e8f0;
+        }
+        .login-card {
+            max-width: 400px;
+            margin: 80px auto;
+            text-align: center;
+        }
+        h1 {
+            color: #f97316;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+        input, select, button {
+            padding: 10px 16px;
+            border-radius: 60px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #f1f5f9;
+            font-size: 0.9rem;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        button {
+            background: #f97316;
+            color: white;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        button:active { transform: scale(0.97); }
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+            margin-bottom: 24px;
+            background: #0f172a;
+            padding: 16px;
+            border-radius: 28px;
+        }
+        .filter-group {
+            flex: 1;
+            min-width: 150px;
+        }
+        .filter-group label {
+            display: block;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #94a3b8;
+        }
+        .log-entry {
+            background: #0f172a;
+            border-left: 4px solid #f97316;
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: 0.05s;
+        }
+        .log-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #facc15;
+        }
+        .log-details {
+            font-family: monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #1e293b;
+            padding: 8px 12px;
+            border-radius: 16px;
+            margin-top: 8px;
+        }
+        .badge {
+            background: #f97316;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .logs-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .filter-action button {
+            margin-top: 22px;
+        }
+        .hidden {
+            display: none;
+        }
+        .stats-summary {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #0f172a;
+            padding: 12px 20px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+        }
+        .error-msg {
+            color: #f87171;
+            background: #7f1d1d40;
+            padding: 12px;
+            border-radius: 24px;
+            margin-top: 12px;
+        }
+        hr {
+            border-color: #334155;
+            margin: 20px 0;
+        }
+        @media (max-width: 700px) {
+            .filter-group { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-card">
+        <h1>🔐 Auditor Access</h1>
+        <div class="sub">Enter auditor secret to view logs</div>
+        <input type="password" id="auditorSecretInput" placeholder="Auditor Secret" autocomplete="off">
+        <button id="loginBtn">Access Audit Logs</button>
+        <div id="loginError" class="error-msg hidden"></div>
+    </div>
+
+    <!-- Audit Panel (hidden until login) -->
+    <div id="auditPanel" class="audit-panel hidden">
+        <h1>📜 Audit Logs · DOT BINGO</h1>
+        <div class="stats-summary" id="statsSummary">
+            <!-- dynamic summary stats -->
+        </div>
+
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Event Type</label>
+                <select id="filterEventType">
+                    <option value="">All Events</option>
+                    <option value="DEPOSIT_INITIATED">DEPOSIT_INITIATED</option>
+                    <option value="DEPOSIT_COMPLETED">DEPOSIT_COMPLETED</option>
+                    <option value="DEPOSIT_FAILED">DEPOSIT_FAILED</option>
+                    <option value="WITHDRAWAL_REQUESTED">WITHDRAWAL_REQUESTED</option>
+                    <option value="WITHDRAWAL_COMPLETED">WITHDRAWAL_COMPLETED</option>
+                    <option value="WITHDRAWAL_REJECTED">WITHDRAWAL_REJECTED</option>
+                    <option value="BINGO_CALLED">BINGO_CALLED</option>
+                    <option value="BINGO_REJECTED">BINGO_REJECTED</option>
+                    <option value="WIN_PAID_OUT">WIN_PAID_OUT</option>
+                    <option value="NUMBER_DRAWN">NUMBER_DRAWN</option>
+                    <option value="CARD_ASSIGNED">CARD_ASSIGNED</option>
+                    <option value="ADMIN_ADD_BALANCE">ADMIN_ADD_BALANCE</option>
+                    <option value="SUSPICIOUS_BEHAVIOR_DETECTED">SUSPICIOUS_BEHAVIOR</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>User ID (Telegram)</label>
+                <input type="text" id="filterUserId" placeholder="e.g., 123456789">
+            </div>
+            <div class="filter-group">
+                <label>Room ID</label>
+                <input type="text" id="filterRoomId" placeholder="stake_10, stake_20, global...">
+            </div>
+            <div class="filter-group">
+                <label>From Date</label>
+                <input type="datetime-local" id="filterFrom">
+            </div>
+            <div class="filter-group">
+                <label>To Date</label>
+                <input type="datetime-local" id="filterTo">
+            </div>
+            <div class="filter-group">
+                <label>Limit</label>
+                <select id="filterLimit">
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                </select>
+            </div>
+            <div class="filter-group filter-action">
+                <button id="applyFiltersBtn">🔍 Apply Filters</button>
+            </div>
+        </div>
+
+        <div id="logsContainer" class="logs-container">
+            <div class="log-entry">Loading logs...</div>
+        </div>
+
+        <div class="pagination">
+            <button id="prevPageBtn" disabled>← Previous</button>
+            <span id="pageInfo">Page 1</span>
+            <button id="nextPageBtn" disabled>Next →</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let auditorSecret = null;
+    let currentPage = 1;
+    let totalCount = 0;
+    let currentFilters = {};
+
+    // Helper: build URL with query parameters
+    async function fetchAuditLogs(page = 1) {
+        const limit = parseInt(document.getElementById('filterLimit').value);
+        const offset = (page - 1) * limit;
+        const params = new URLSearchParams();
+        params.append('secret', auditorSecret);
+        params.append('limit', limit);
+        params.append('offset', offset);
+
+        const eventType = document.getElementById('filterEventType').value;
+        if (eventType) params.append('eventType', eventType);
+        const userId = document.getElementById('filterUserId').value.trim();
+        if (userId) params.append('userId', userId);
+        const roomId = document.getElementById('filterRoomId').value.trim();
+        if (roomId) params.append('roomId', roomId);
+        const fromDate = document.getElementById('filterFrom').value;
+        if (fromDate) params.append('from', new Date(fromDate).toISOString());
+        const toDate = document.getElementById('filterTo').value;
+        if (toDate) params.append('to', new Date(toDate).toISOString());
+
+        try {
+            const response = await fetch(`/admin/audit?${params.toString()}`);
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(errText || 'Failed to fetch logs');
+            }
+            const data = await response.json();
+            totalCount = data.count || 0;
+            renderLogs(data.logs || []);
+            updatePaginationControls(page, limit);
+        } catch (err) {
+            document.getElementById('logsContainer').innerHTML = `<div class="error-msg">❌ Error: ${err.message}</div>`;
+        }
+    }
+
+    function renderLogs(logs) {
+        const container = document.getElementById('logsContainer');
+        if (!logs.length) {
+            container.innerHTML = '<div class="log-entry">📭 No logs match your filters.</div>';
+            return;
+        }
+        container.innerHTML = logs.map(log => `
+            <div class="log-entry">
+                <div class="log-header">
+                    <span><span class="badge">${log.event_type}</span>  •  ${new Date(log.timestamp).toLocaleString()}</span>
+                    <span>🆔 ${log.user_id || 'system'}</span>
+                </div>
+                <div><strong>Room:</strong> ${log.room_id || '—'} &nbsp;| <strong>IP:</strong> ${log.ip_address || '—'}</div>
+                <div class="log-details"><strong>📦 Details:</strong><br>${JSON.stringify(log.details, null, 2)}</div>
+            </div>
+        `).join('');
+    }
+
+    function updatePaginationControls(page, limit) {
+        const totalPages = Math.ceil(totalCount / limit);
+        document.getElementById('pageInfo').innerText = `Page ${page} of ${totalPages || 1}`;
+        document.getElementById('prevPageBtn').disabled = page <= 1;
+        document.getElementById('nextPageBtn').disabled = page >= totalPages;
+    }
+
+    async function loadSummaryStats() {
+        try {
+            const res = await fetch(`/admin/audit-summary?secret=${auditorSecret}`);
+            if (!res.ok) throw new Error();
+            const stats = await res.json();
+            const summaryDiv = document.getElementById('statsSummary');
+            summaryDiv.innerHTML = `
+                <div class="stat-card">💰 Total Deposits: ${stats.totalDeposits || 0} ETB</div>
+                <div class="stat-card">💸 Total Withdrawals: ${stats.totalWithdrawals || 0} ETB</div>
+                <div class="stat-card">🏛️ House Profit: ${stats.totalHouseProfit || 0} ETB</div>
+            `;
+        } catch (err) {
+            document.getElementById('statsSummary').innerHTML = `<div class="error-msg">Failed to load summary: ${err.message}</div>`;
+        }
+    }
+
+    // Login logic
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+        const secret = document.getElementById('auditorSecretInput').value.trim();
+        if (!secret) {
+            showLoginError('Please enter auditor secret');
+            return;
+        }
+        auditorSecret = secret;
+        // Test the secret by calling audit endpoint with limit 1
+        try {
+            const testUrl = `/admin/audit?secret=${auditorSecret}&limit=1`;
+            const res = await fetch(testUrl);
+            if (!res.ok) throw new Error('Invalid secret or no access');
+            // Success
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('auditPanel').style.display = 'block';
+            // Load initial data
+            currentPage = 1;
+            await loadSummaryStats();
+            await fetchAuditLogs(1);
+        } catch (err) {
+            showLoginError(`Authentication failed: ${err.message}`);
+            auditorSecret = null;
+        }
+    });
+
+    function showLoginError(msg) {
+        const errDiv = document.getElementById('loginError');
+        errDiv.textContent = msg;
+        errDiv.style.display = 'block';
+        setTimeout(() => errDiv.style.display = 'none', 4000);
+    }
+
+    // Apply filters resets to page 1
+    document.getElementById('applyFiltersBtn').addEventListener('click', () => {
+        currentPage = 1;
+        fetchAuditLogs(1);
+    });
+
+    document.getElementById('prevPageBtn').addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            fetchAuditLogs(currentPage);
+        }
+    });
+    document.getElementById('nextPageBtn').addEventListener('click', () => {
+        const limit = parseInt(document.getElementById('filterLimit').value);
+        const totalPages = Math.ceil(totalCount / limit);
+        if (currentPage < totalPages) {
+            currentPage++;
+            fetchAuditLogs(currentPage);
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎲 DOT BINGO – Admin Panel</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        body {
+            background: #f1f5f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .login-card, .dashboard {
+            background: white;
+            border-radius: 32px;
+            padding: 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        .login-card {
+            max-width: 400px;
+            margin: 80px auto;
+            text-align: center;
+        }
+        h1 {
+            font-size: 1.8rem;
+            color: #ea580c;
+            margin-bottom: 0.5rem;
+        }
+        .sub {
+            color: #475569;
+            margin-bottom: 1.5rem;
+        }
+        input, button {
+            padding: 12px 16px;
+            border-radius: 60px;
+            border: 1px solid #e2e8f0;
+            font-size: 1rem;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        button {
+            background: #ea580c;
+            color: white;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        button:active { transform: scale(0.97); }
+        .tab-bar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        .tab-btn {
+            background: none;
+            color: #334155;
+            width: auto;
+            padding: 8px 20px;
+            margin: 0;
+            border-radius: 40px;
+            font-weight: 600;
+        }
+        .tab-btn.active {
+            background: #ea580c;
+            color: white;
+        }
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        .request-card {
+            background: #fef9f0;
+            border-radius: 24px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border-left: 6px solid #f97316;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+        }
+        .request-header {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+        .user-id {
+            color: #ea580c;
+        }
+        .amount {
+            font-size: 1.2rem;
+            font-weight: 800;
+        }
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .approve-btn {
+            background: #10b981;
+        }
+        .reject-btn {
+            background: #ef4444;
+        }
+        .grid-2 {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .stats-card {
+            background: #f8fafc;
+            border-radius: 28px;
+            padding: 20px;
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        .stats-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #ea580c;
+        }
+        .add-balance-form {
+            background: #f8fafc;
+            border-radius: 28px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .audit-log {
+            background: #f1f5f9;
+            border-radius: 20px;
+            padding: 12px;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .error-msg {
+            color: #dc2626;
+            font-size: 0.8rem;
+            margin-top: -8px;
+            margin-bottom: 12px;
+        }
+        .success-msg {
+            color: #10b981;
+        }
+        hr {
+            margin: 20px 0;
+        }
+        #loginError {
+            margin-top: 12px;
+        }
+        #dashboard {
+            display: none;
+        }
+        #balanceTab .stats-card {
+            margin-top: 20px;
+        }
+        #auditTab button {
+            width: auto;
+            margin-top: 16px;
+            background: #334155;
+        }
+        @media (max-width: 640px) {
+            body { padding: 12px; }
+            .request-header { flex-direction: column; gap: 6px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container" id="app">
+    <!-- Login screen -->
+    <div id="loginScreen" class="login-card">
+        <h1>🔐 Admin Access</h1>
+        <div class="sub">Enter secret key to manage deposits, withdrawals & balances</div>
+        <input type="password" id="adminSecretInput" placeholder="Admin Secret" autocomplete="off">
+        <button id="loginBtn">Login</button>
+        <div id="loginError" class="error-msg"></div>
+    </div>
+
+    <!-- Dashboard (hidden until login) -->
+    <div id="dashboard">
+        <div class="dashboard">
+            <h1>🎲 DOT BINGO Admin</h1>
+            <div class="tab-bar">
+                <button class="tab-btn active" data-tab="deposits">💰 Pending Deposits</button>
+                <button class="tab-btn" data-tab="withdrawals">💸 Pending Withdrawals</button>
+                <button class="tab-btn" data-tab="balance">➕ Add Balance</button>
+                <button class="tab-btn" data-tab="audit">📜 Audit Summary</button>
+            </div>
+
+            <!-- Deposits Tab -->
+            <div id="depositsTab" class="section active">
+                <h2>📥 Deposit Requests</h2>
+                <div id="depositsList">Loading...</div>
+            </div>
+
+            <!-- Withdrawals Tab -->
+            <div id="withdrawalsTab" class="section">
+                <h2>📤 Withdrawal Requests</h2>
+                <div id="withdrawalsList">Loading...</div>
+            </div>
+
+            <!-- Add Balance Tab -->
+            <div id="balanceTab" class="section">
+                <h2>➕ Manual Balance Addition</h2>
+                <div class="add-balance-form">
+                    <input type="text" id="targetTelegramId" placeholder="Telegram ID (numeric)" autocomplete="off">
+                    <input type="number" id="addAmount" placeholder="Amount (ETB)" min="1" step="1">
+                    <button id="submitAddBalanceBtn">Add Balance</button>
+                    <div id="addBalanceResult"></div>
+                </div>
+                <div class="stats-card">
+                    <div>💡 Tip: Find user Telegram ID via audit logs or from deposit/withdrawal requests.</div>
+                </div>
+            </div>
+
+            <!-- Audit Summary Tab -->
+            <div id="auditTab" class="section">
+                <h2>📊 Financial Summary</h2>
+                <div class="grid-2">
+                    <div class="stats-card"><div>💰 Total Deposits</div><div class="stats-number" id="totalDeposits">0</div><div>ETB</div></div>
+                    <div class="stats-card"><div>💸 Total Withdrawals</div><div class="stats-number" id="totalWithdrawals">0</div><div>ETB</div></div>
+                    <div class="stats-card"><div>🏛️ House Profit</div><div class="stats-number" id="houseProfit">0</div><div>ETB</div></div>
+                </div>
+                <hr>
+                <h3>📋 Recent Audit Logs (last 50 events)</h3>
+                <div id="auditLogsList" style="max-height: 500px; overflow-y: auto;">Loading...</div>
+                <button id="refreshAuditBtn" type="button">⟳ Refresh Audit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let adminSecret = null;
+
+    const apiCall = async (endpoint, options = {}) => {
+        const url = endpoint.includes('?') ? `${endpoint}&secret=${adminSecret}` : `${endpoint}?secret=${adminSecret}`;
+        const res = await fetch(url, {
+            ...options,
+            headers: { 'Content-Type': 'application/json', ...options.headers }
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text || 'Request failed');
+        }
+        return res.json();
+    };
+
+    const apiPost = async (endpoint, body) => {
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...body, secret: adminSecret })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return res.json();
+    };
+
+    // Load pending deposits
+    async function loadDeposits() {
+        const container = document.getElementById('depositsList');
+        try {
+            const data = await apiCall('/admin/deposits');
+            const requests = data.requests || [];
+            if (requests.length === 0) {
+                container.innerHTML = '<div class="request-card">✅ No pending deposits</div>';
+                return;
+            }
+            container.innerHTML = requests.map(req => `
+                <div class="request-card" data-id="${req.id}">
+                    <div class="request-header">
+                        <span class="user-id">👤 ${req.username} (${req.telegram_id})</span>
+                        <span class="amount">💰 ${req.amount} ETB</span>
+                    </div>
+                    <div>📱 ${req.payment_type} | Phone: ${req.phone || '—'}</div>
+                    <div>🕒 ${new Date(req.created_at).toLocaleString()}</div>
+                    <div>📎 <a href="${req.proof_path}" target="_blank">View Proof</a></div>
+                    <div class="actions">
+                        <button class="approve-btn" onclick="processDeposit(${req.id}, 'approve')">✅ Approve</button>
+                        <button class="reject-btn" onclick="processDeposit(${req.id}, 'reject')">❌ Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (err) {
+            container.innerHTML = `<div class="error-msg">❌ Error: ${err.message}</div>`;
+        }
+    }
+
+    async function processDeposit(requestId, action) {
+        if (!confirm(`Are you sure you want to ${action} this deposit?`)) return;
+        try {
+            const result = await apiPost('/admin/process-deposit', { requestId, action });
+            alert(`✅ Deposit ${action}d successfully. New balance: ${result.newBalance || 'updated'}`);
+            loadDeposits();
+            loadWithdrawals(); // refresh both
+            loadAuditSummary();
+        } catch (err) {
+            alert(`Error: ${err.message}`);
+        }
+    }
+
+    async function loadWithdrawals() {
+        const container = document.getElementById('withdrawalsList');
+        try {
+            const data = await apiCall('/admin/withdrawals');
+            const requests = data.requests || [];
+            if (requests.length === 0) {
+                container.innerHTML = '<div class="request-card">✅ No pending withdrawals</div>';
+                return;
+            }
+            container.innerHTML = requests.map(req => `
+                <div class="request-card" data-id="${req.id}">
+                    <div class="request-header">
+                        <span class="user-id">👤 ${req.username} (${req.telegram_id})</span>
+                        <span class="amount">💰 ${req.amount} ETB</span>
+                    </div>
+                    <div>💳 ${req.withdrawal_type} | ${req.phone_number}</div>
+                    <div>📛 Name: ${req.receiver_name}</div>
+                    <div>🕒 ${new Date(req.created_at).toLocaleString()}</div>
+                    <div class="actions">
+                        <button class="approve-btn" onclick="processWithdrawal(${req.id}, 'approve')">✅ Approve</button>
+                        <button class="reject-btn" onclick="processWithdrawal(${req.id}, 'reject')">❌ Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (err) {
+            container.innerHTML = `<div class="error-msg">❌ Error: ${err.message}</div>`;
+        }
+    }
+
+    async function processWithdrawal(requestId, action) {
+        if (!confirm(`Process withdrawal #${requestId} as ${action}?`)) return;
+        try {
+            const result = await apiPost('/admin/process-withdrawal', { requestId, action });
+            alert(`✅ Withdrawal ${action}d. New balance: ${result.newBalance || 'updated'}`);
+            loadWithdrawals();
+            loadDeposits();
+            loadAuditSummary();
+        } catch (err) {
+            alert(`Error: ${err.message}`);
+        }
+    }
+
+    async function addBalance() {
+        const telegramId = document.getElementById('targetTelegramId').value.trim();
+        const amount = parseInt(document.getElementById('addAmount').value);
+        if (!telegramId || isNaN(amount) || amount <= 0) {
+            document.getElementById('addBalanceResult').innerHTML = '<span class="error-msg">❌ Valid Telegram ID and amount required</span>';
+            return;
+        }
+        try {
+            const result = await apiPost('/admin/add-balance', { telegramId, amount });
+            document.getElementById('addBalanceResult').innerHTML = `<span class="success-msg">✅ Added ${amount} ETB to ${telegramId}. New balance: ${result.newBalance} ETB</span>`;
+            document.getElementById('targetTelegramId').value = '';
+            document.getElementById('addAmount').value = '';
+            // Refresh audit summary after balance addition
+            loadAuditSummary();
+        } catch (err) {
+            document.getElementById('addBalanceResult').innerHTML = `<span class="error-msg">❌ ${err.message}</span>`;
+        }
+    }
+
+    async function loadAuditSummary() {
+        try {
+            // fetch summary stats
+            const stats = await apiCall('/admin/audit-summary');
+            document.getElementById('totalDeposits').innerText = stats.totalDeposits || 0;
+            document.getElementById('totalWithdrawals').innerText = stats.totalWithdrawals || 0;
+            document.getElementById('houseProfit').innerText = stats.totalHouseProfit || 0;
+
+            // fetch recent audit logs (limit 50)
+            const logsData = await apiCall('/admin/audit?limit=50');
+            const logs = logsData.logs || [];
+            const logsContainer = document.getElementById('auditLogsList');
+            if (logs.length === 0) {
+                logsContainer.innerHTML = '<div class="audit-log">No audit logs found.</div>';
+                return;
+            }
+            logsContainer.innerHTML = logs.map(log => `
+                <div class="audit-log">
+                    <strong>${log.event_type}</strong> | ${new Date(log.timestamp).toLocaleString()}<br>
+                    User: ${log.user_id || 'system'} | Room: ${log.room_id || '—'}<br>
+                    Details: ${JSON.stringify(log.details, null, 2).substring(0, 200)}${JSON.stringify(log.details).length > 200 ? '…' : ''}
+                </div>
+            `).join('');
+        } catch (err) {
+            console.error(err);
+            document.getElementById('auditLogsList').innerHTML = `<div class="error-msg">Failed to load audit: ${err.message}</div>`;
+        }
+    }
+
+    // UI Tabs
+    function initTabs() {
+        const tabs = document.querySelectorAll('.tab-btn');
+        tabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.getAttribute('data-tab');
+                document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+                document.getElementById(`${tabId}Tab`).classList.add('active');
+                tabs.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Load data when switching tabs
+                if (tabId === 'deposits') loadDeposits();
+                if (tabId === 'withdrawals') loadWithdrawals();
+                if (tabId === 'audit') loadAuditSummary();
+            });
+        });
+    }
+
+    // Login logic
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+        const secret = document.getElementById('adminSecretInput').value.trim();
+        if (!secret) {
+            document.getElementById('loginError').innerText = 'Please enter admin secret';
+            return;
+        }
+        adminSecret = secret;
+        // Test access by calling any endpoint (e.g., deposits)
+        try {
+            await apiCall('/admin/deposits');
+            // success
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            // initial loads
+            loadDeposits();
+            loadWithdrawals();
+            loadAuditSummary();
+            initTabs();
+        } catch (err) {
+            document.getElementById('loginError').innerText = `Invalid secret or API error: ${err.message}`;
+            adminSecret = null;
+        }
+    });
+
+    // Manual refresh buttons
+    document.getElementById('submitAddBalanceBtn')?.addEventListener('click', addBalance);
+    document.getElementById('refreshAuditBtn')?.addEventListener('click', loadAuditSummary);
+</script>
+</body>
+</html>
