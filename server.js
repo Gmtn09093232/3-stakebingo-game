@@ -347,6 +347,17 @@ class GameRoom {
       }
       const number = available[Math.floor(Math.random() * available.length)];
       this.calledNumbers.push(number);
+
+      // AUTO-MARK: Mark this number for every player who has it on their card
+      for (const player of this.players) {
+        if (!player.markedNumbers.includes(number) && player.card.flat().includes(number)) {
+          player.markedNumbers.push(number);
+          // Send private update to the player
+          const socket = getSocketByUserId(player.telegramId);
+          if (socket) socket.emit('markedNumbers', player.markedNumbers);
+        }
+      }
+
       this.io.to(this.getRoomId()).emit('numberCalled', { number, calledNumbers: this.calledNumbers });
       Audit.numberDrawn(this.getRoomId(), { drawnNumber: number, drawIndex: this.calledNumbers.length, stake: this.stake });
     }, 4000);
@@ -354,11 +365,15 @@ class GameRoom {
 
   getLines(card) {
     const lines = [];
-    for (let r=0; r<5; r++) lines.push([card[r][0], card[r][1], card[r][2], card[r][3], card[r][4]]);
-    for (let c=0; c<5; c++) lines.push([card[0][c], card[1][c], card[2][c], card[3][c], card[4][c]]);
+    // rows
+    for (let r = 0; r < 5; r++) lines.push([card[r][0], card[r][1], card[r][2], card[r][3], card[r][4]]);
+    // columns
+    for (let c = 0; c < 5; c++) lines.push([card[0][c], card[1][c], card[2][c], card[3][c], card[4][c]]);
+    // main diagonal
     lines.push([card[0][0], card[1][1], card[2][2], card[3][3], card[4][4]]);
+    // anti-diagonal
     lines.push([card[0][4], card[1][3], card[2][2], card[3][1], card[4][0]]);
-    lines.push([card[0][0], card[0][4], card[4][0], card[4][4]]);
+    // NOTE: Removed the non‑standard "four corners" line to avoid false wins
     return lines;
   }
 
@@ -368,10 +383,13 @@ class GameRoom {
 
   isBingoValidOnLastCall(card, marked, lastCalled) {
     if (lastCalled === null) return false;
+    // The last called number must be marked (or FREE)
+    if (lastCalled !== 'FREE' && !marked.includes(lastCalled)) return false;
     const lines = this.getLines(card);
     for (const line of lines) {
-      if (!this.isLineComplete(line, marked)) continue;
-      if (line.includes(lastCalled)) return true;
+      if (this.isLineComplete(line, marked) && line.includes(lastCalled)) {
+        return true;
+      }
     }
     return false;
   }
@@ -380,15 +398,27 @@ class GameRoom {
     if (this.status !== 'running') return { success: false, message: 'Game not running' };
     const player = this.players.find(p => p.telegramId === telegramId);
     if (!player) return { success: false, message: 'Not in game' };
+
     const lastCalled = this.calledNumbers.length > 0 ? this.calledNumbers[this.calledNumbers.length-1] : null;
-    if (lastCalled === null || !this.isBingoValidOnLastCall(player.card, player.markedNumbers, lastCalled)) {
+    console.log(`[DEBUG] claimBingo by ${username} (${telegramId}) - lastCalled=${lastCalled}, markedCount=${player.markedNumbers.length}`);
+
+    if (lastCalled === null) {
+      console.log(`[DEBUG] claimBingo: lastCalled is null for user ${telegramId}`);
+      Audit.bingoRejected(this.getRoomId(), telegramId, ip, { reason: 'no_numbers_drawn_yet', lastCalled });
+      return { success: false, message: 'No numbers drawn yet' };
+    }
+
+    if (!this.isBingoValidOnLastCall(player.card, player.markedNumbers, lastCalled)) {
+      console.log(`[DEBUG] claimBingo: invalid claim for user ${telegramId}. lastCalled=${lastCalled}, marked=${player.markedNumbers}`);
       Audit.bingoRejected(this.getRoomId(), telegramId, ip, { reason: 'invalid_bingo_call', lastCalled });
       return { success: false, message: 'Invalid Bingo claim' };
     }
+
     if (this.winners.find(w => w.telegramId === telegramId)) return { success: false, message: 'Already claimed' };
     if (this.winningNumber === null) this.winningNumber = lastCalled;
     this.winners.push({ telegramId, username });
     Audit.bingoCalled(this.getRoomId(), telegramId, ip, { cardId: player.cardNumber.toString(), cardGrid: player.card, calledNumber: lastCalled, stake: this.stake });
+
     if (!this.bingoGraceTimeout && this.winners.length === 1) {
       this.io.to(this.getRoomId()).emit('multipleBingoPossible', { message: 'Bingo claimed! Waiting for other potential winners...' });
       this.bingoGraceTimeout = setTimeout(() => this.endGameWithWinners(), 3000);
@@ -402,6 +432,7 @@ class GameRoom {
     if (this.callInterval) clearInterval(this.callInterval);
     if (this.bingoGraceTimeout) clearTimeout(this.bingoGraceTimeout);
     this.bingoGraceTimeout = null;
+
     if (this.winners.length > 0) {
       const prizeEach = Math.floor(this.prizePool / this.winners.length);
       for (const w of this.winners) {
@@ -431,6 +462,7 @@ class GameRoom {
         players_count: this.players.length,
         winners_count: this.winners.length
       });
+
       const ipCounts = {};
       this.winners.forEach(w => {
         const player = this.players.find(p => p.telegramId === w.telegramId);
@@ -445,6 +477,7 @@ class GameRoom {
           });
         }
       });
+
       const winnerNames = this.winners.map(w => w.username);
       this.io.to(this.getRoomId()).emit('gameEnded', {
         winner: winnerNames.length === 1 ? winnerNames[0] : `${winnerNames.length} winners`,
@@ -471,6 +504,9 @@ class GameRoom {
     if (!this.calledNumbers.includes(number) && number !== 'FREE') return false;
     if (player.markedNumbers.includes(number)) return false;
     player.markedNumbers.push(number);
+    // Send private update to the player
+    const socket = getSocketByUserId(telegramId);
+    if (socket) socket.emit('markedNumbers', player.markedNumbers);
     return true;
   }
 }
@@ -799,16 +835,33 @@ io.on('connection', async (socket) => {
     }
   });
 
+  // NEW: event to change card number while in lobby
+  socket.on('changeCardNumber', async ({ stake, cardNumber }, callback) => {
+    const stakeNum = parseInt(stake);
+    if (![10,20,30].includes(stakeNum)) return callback({ success: false, error: 'Invalid stake' });
+    const room = rooms[stakeNum];
+    if (!room) return callback({ success: false, error: 'Room not found' });
+    if (userActiveRoom.get(socket.userId) !== stakeNum) return callback({ success: false, error: 'Not in this room' });
+    try {
+      await room.changeCardNumber(socket.userId, parseInt(cardNumber));
+      const player = room.players.find(p => p.telegramId === socket.userId);
+      if (player) {
+        callback({ success: true, card: player.card, markedNumbers: player.markedNumbers });
+      } else {
+        callback({ success: false, error: 'Player not found' });
+      }
+    } catch (err) {
+      callback({ success: false, error: err.message });
+    }
+  });
+
   socket.on('markNumber', ({ stake, number }) => {
     const stakeNum = parseInt(stake);
     if (![10,20,30].includes(stakeNum)) return;
     const room = rooms[stakeNum];
     if (room && userActiveRoom.get(socket.userId) === stakeNum) {
       if (room.markNumber(socket.userId, number)) {
-        const player = room.players.find(p => p.telegramId === socket.userId);
-        if (player) {
-          room.io.to(room.getRoomId()).emit('markedNumbers', player.markedNumbers);
-        }
+        // No broadcast – markedNumbers already sent privately inside markNumber()
       }
     }
   });
