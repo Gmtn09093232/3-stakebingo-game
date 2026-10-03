@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Materials Lab — Procedure & Inspection System</title>
+<title>Materials Lab — Procedure &amp; Inspection System</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   :root {
     --primary:#1e3a5f; --accent:#2e7d9a; --success:#2e7d32;
@@ -11,17 +12,20 @@
     --border:#d6dde5; --text:#1a2733;
   }
   * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+  body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+
+  /* HEADER */
   header {
     background:linear-gradient(135deg,var(--primary),var(--accent));
     color:#fff; padding:1rem 2rem; display:flex; justify-content:space-between;
     align-items:center; box-shadow:0 2px 8px rgba(0,0,0,.15); flex-wrap:wrap; gap:.8rem;
   }
   header h1 { font-size:1.2rem; font-weight:600; }
-  header .user-box { display:flex; align-items:center; gap:.8rem; font-size:.85rem; }
+  header .user-box { display:flex; align-items:center; gap:.8rem; font-size:.85rem; flex-wrap:wrap; }
   header .user-box button {
     background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3);
     color:#fff; padding:.4rem .9rem; border-radius:6px; cursor:pointer; font-size:.8rem;
+    font-family:inherit;
   }
   header .user-box button:hover { background:rgba(255,255,255,.25); }
 
@@ -45,10 +49,10 @@
   .error-box.show { display:block; }
 
   /* TABS */
-  .tabs { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1.5rem; border-bottom:2px solid var(--border); }
+  .tabs { display:flex; gap:.3rem; flex-wrap:wrap; margin-bottom:1.5rem; border-bottom:2px solid var(--border); }
   .tab {
-    padding:.7rem 1.2rem; background:transparent; border:none;
-    border-bottom:3px solid transparent; cursor:pointer; font-size:.9rem;
+    padding:.7rem 1rem; background:transparent; border:none;
+    border-bottom:3px solid transparent; cursor:pointer; font-size:.85rem;
     font-weight:500; color:#5a6b7c; transition:all .2s; font-family:inherit;
   }
   .tab:hover { color:var(--accent); }
@@ -79,9 +83,7 @@
     width:100%; padding:.55rem .7rem; border:1px solid var(--border);
     border-radius:6px; font-size:.9rem; font-family:inherit; background:#fbfcfe; transition:border .2s;
   }
-  input:focus, select:focus, textarea:focus {
-    outline:none; border-color:var(--accent); background:#fff;
-  }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:var(--accent); background:#fff; }
   textarea { resize:vertical; min-height:70px; }
 
   /* CHECKLIST */
@@ -120,6 +122,7 @@
   .btn-success:hover:not(:disabled) { background:#245c28; }
   .btn-outline { background:transparent; border:1px solid var(--border); color:var(--text); }
   .btn-outline:hover:not(:disabled) { background:#eef3f8; }
+  .btn-danger { background:var(--danger); color:#fff; }
   .btn-group { display:flex; gap:.6rem; flex-wrap:wrap; margin-top:1rem; }
 
   /* SUMMARY */
@@ -141,7 +144,7 @@
     background:#eef3f8; font-weight:600; font-size:.75rem;
     text-transform:uppercase; color:#4a5a6a;
   }
-  td input { border:1px solid transparent; background:transparent; padding:.3rem; width:100%; }
+  td input { border:1px solid transparent; background:transparent; padding:.3rem; width:100%; font-size:.85rem; }
   td input:focus { border-color:var(--accent); background:#fff; }
 
   .panel { display:none; }
@@ -152,6 +155,8 @@
     border-radius:8px; font-size:.85rem; white-space:pre-wrap;
     font-family:'Courier New',monospace; max-height:600px; overflow-y:auto;
   }
+
+  canvas { max-width:100%; }
 
   /* TOAST */
   #toast {
@@ -167,6 +172,10 @@
 
   .footer-note { text-align:center; font-size:.78rem; color:#7a8a9a; padding:1.5rem; }
 
+  details { margin-top:.6rem; }
+  details summary { user-select:none; padding:.3rem 0; }
+  details summary::-webkit-details-marker { color:var(--accent); }
+
   @media print {
     header, .tabs, .btn-group, .no-print { display:none !important; }
     .panel { display:block !important; }
@@ -176,7 +185,7 @@
 </head>
 <body>
 
-<!-- ============== LOGIN VIEW ============== -->
+<!-- ============================= LOGIN ============================= -->
 <div id="login-view">
   <div class="login-card">
     <h2>🔬 Materials Lab</h2>
@@ -215,7 +224,7 @@
   </div>
 </div>
 
-<!-- ============== APP VIEW ============== -->
+<!-- ============================= APP ============================= -->
 <div id="app-view" style="display:none;">
   <header>
     <h1>🔬 Materials Testing Lab</h1>
@@ -257,7 +266,7 @@
       <button class="tab" data-tab="audit">🔒 Audit Log</button>
     </div>
 
-    <!-- ============ HARDNESS ============ -->
+    <!-- ================= HARDNESS ================= -->
     <div class="panel active" id="panel-hardness">
       <div class="card">
         <h2>⚙️ Test Setup</h2>
@@ -288,8 +297,8 @@
         <h2>✅ Pre-Test Checklist</h2>
         <div id="h-checklist"></div>
         <div class="summary-bar">
-          <span>Progress: <strong id="h-progress-text">0 / 0</strong></span>
-          <div class="progress"><div class="progress-fill" id="h-progress"></div></div>
+          <span>Progress: <strong id="hardness-progress-text">0 / 0</strong></span>
+          <div class="progress"><div class="progress-fill" id="hardness-progress"></div></div>
         </div>
       </div>
 
@@ -311,7 +320,7 @@
       </div>
     </div>
 
-    <!-- ============ MICROSTRUCTURE ============ -->
+    <!-- ================= MICROSTRUCTURE ================= -->
     <div class="panel" id="panel-micro">
       <div class="card">
         <h2>🔍 Examination Setup</h2>
@@ -354,7 +363,7 @@
       </div>
     </div>
 
-    <!-- ============ COMPOSITION ============ -->
+    <!-- ================= COMPOSITION ================= -->
     <div class="panel" id="panel-comp">
       <div class="card">
         <h2>🧪 Analysis Setup</h2>
@@ -402,7 +411,7 @@
       </div>
     </div>
 
-    <!-- ============ UTM ============ -->
+    <!-- ================= UTM ================= -->
     <div class="panel" id="panel-utm">
       <div class="card">
         <h2>🏗️ UTM Test Setup</h2>
@@ -437,8 +446,81 @@
         </div>
       </div>
 
+      <!-- CURVE DATA & GRAPHS -->
       <div class="card">
-        <h2>📈 Test Results</h2>
+        <h2>📈 Curve Data &amp; Graphs</h2>
+
+        <div class="grid-3">
+          <div>
+            <label>Specimen Area (mm²)</label>
+            <input type="number" step="0.01" id="u-area" placeholder="auto from diameter" oninput="redrawCharts()">
+          </div>
+          <div>
+            <label>Gauge Length (mm) — for strain</label>
+            <input type="number" step="0.01" id="u-gauge-curve" placeholder="e.g., 50" oninput="redrawCharts(); renderCurveTable();">
+          </div>
+          <div>
+            <label>Yield Offset (%)</label>
+            <input type="number" step="0.01" id="u-offset" value="0.2" oninput="redrawCharts()">
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-outline" onclick="addCurvePoint()">+ Add Point</button>
+          <button class="btn btn-outline" onclick="loadDemoCurve()">Load Demo Data</button>
+          <button class="btn btn-outline" onclick="clearCurve()">Clear</button>
+          <button class="btn btn-primary" onclick="analyzeCurve()">⚡ Analyze &amp; Fill Results</button>
+        </div>
+
+        <details style="margin-top:1rem;">
+          <summary style="cursor:pointer;font-weight:600;color:var(--accent);">📋 Paste CSV / Excel data</summary>
+          <p style="font-size:.78rem;color:#7a8a9a;margin:.5rem 0;">
+            Two columns: <b>Displacement (mm)</b> then <b>Load (kN)</b>. One pair per line. Commas or tabs.
+          </p>
+          <textarea id="u-paste-area" rows="6" placeholder="0,0
+0.10,3.5
+0.25,8.9
+0.40,14.2
+..."></textarea>
+          <div class="btn-group">
+            <button class="btn btn-primary" onclick="importPaste()">Import Data</button>
+          </div>
+        </details>
+
+        <div class="grid-2" style="margin-top:1.2rem;">
+          <div>
+            <h3>Load vs Displacement</h3>
+            <canvas id="chart-load" height="230"></canvas>
+          </div>
+          <div>
+            <h3>Stress vs Strain</h3>
+            <canvas id="chart-stress" height="230"></canvas>
+          </div>
+        </div>
+
+        <div id="u-curve-analysis" style="margin-top:1rem;"></div>
+
+        <details style="margin-top:1rem;">
+          <summary style="cursor:pointer;font-weight:600;color:var(--accent);">Data Points Table</summary>
+          <table id="u-curve-table" style="margin-top:.5rem;">
+            <thead>
+              <tr>
+                <th style="width:40px;">#</th>
+                <th>Displacement (mm)</th>
+                <th>Load (kN)</th>
+                <th>Stress (MPa)</th>
+                <th>Strain (%)</th>
+                <th style="width:40px;"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </details>
+      </div>
+
+      <!-- RESULT SUMMARY -->
+      <div class="card">
+        <h2>📊 Test Result Summary</h2>
         <div class="grid-3">
           <div><label>Yield Strength (MPa)</label><input type="number" step="0.1" id="u-ys" /></div>
           <div><label>Tensile Strength (MPa)</label><input type="number" step="0.1" id="u-uts" /></div>
@@ -467,7 +549,7 @@
       </div>
     </div>
 
-    <!-- ============ REPORT ============ -->
+    <!-- ================= REPORT ================= -->
     <div class="panel" id="panel-report">
       <div class="card">
         <h2>📄 Consolidated Report</h2>
@@ -490,7 +572,7 @@
       </div>
     </div>
 
-    <!-- ============ AUDIT ============ -->
+    <!-- ================= AUDIT ================= -->
     <div class="panel" id="panel-audit">
       <div class="card">
         <h2>🔒 Audit Log (ISO 17025)</h2>
@@ -521,7 +603,7 @@
 // ============================================================
 // STATE + HELPERS
 // ============================================================
-const API = ''; // same origin
+const API = '';
 let TOKEN = localStorage.getItem('ml_token') || '';
 let CURRENT_USER = null;
 let ACTIVE_SAMPLE_ID = null;
@@ -559,7 +641,6 @@ function showLogin() {
   $('signup-form').style.display = 'none';
   $('login-error').classList.remove('show');
 }
-
 function showLoginError(msg) {
   const e = $('login-error');
   e.textContent = msg;
@@ -631,7 +712,16 @@ function enterApp() {
   $('app-view').style.display = 'block';
   $('user-name').textContent = CURRENT_USER.full_name || CURRENT_USER.email || '—';
   $('user-role').textContent = CURRENT_USER.role || 'operator';
+
+  // Hide audit tab for non-privileged roles
+  const canViewAudit = ['reviewer','approver','admin'].includes(CURRENT_USER.role);
+  const auditTab = document.querySelector('.tab[data-tab="audit"]');
+  if (auditTab) auditTab.style.display = canViewAudit ? '' : 'none';
+
   loadSamples();
+
+  // Init charts after DOM is shown
+  setTimeout(initCurveCharts, 100);
 }
 
 // ============================================================
@@ -646,7 +736,7 @@ const CHECKLISTS = {
     'Machine calibration is current (within 12 months)',
     'Reference standard block calibration is current',
     'Verification on reference block within tolerance',
-    'Correct indenter &amp; load for specified scale',
+    'Correct indenter & load for specified scale',
     'Anvil / support correct and secure',
     'Ambient temperature recorded (23 ± 5 °C)',
     'Minimum 3 readings; spacing ≥ 3× indent dia.',
@@ -684,11 +774,11 @@ const CHECKLISTS = {
     'Compared against specification limits',
     'Out-of-spec elements flagged',
     'Raw spectra / printouts retained',
-    'Record signed &amp; dated'
+    'Record signed & dated'
   ],
   utm: [
     'Sample ID matches job traveller',
-    'Specimen dimensions measured &amp; recorded',
+    'Specimen dimensions measured & recorded',
     'Geometry meets standard (ASTM E8 / ISO 6892)',
     'Gauge length marked on specimen',
     'UTM calibration current',
@@ -704,12 +794,13 @@ const CHECKLISTS = {
     'Fracture surface inspected, location recorded',
     'Fracture within gauge length (valid test)',
     'Raw data file saved with traceable name',
-    'Record signed &amp; dated'
+    'Record signed & dated'
   ]
 };
 
 function buildChecklist(containerId, items, key) {
   const c = $(containerId);
+  if (!c) return;
   c.innerHTML = '';
   items.forEach((text, i) => {
     const id = `${key}-chk-${i}`;
@@ -1002,8 +1093,300 @@ async function saveComposition() {
 }
 
 // ============================================================
-// UTM
+// UTM — CORE + CURVE CHARTS
 // ============================================================
+let curveData = [];
+let chartLoad = null;
+let chartStress = null;
+
+function initCurveCharts() {
+  const loadCtx = document.getElementById('chart-load');
+  const stressCtx = document.getElementById('chart-stress');
+  if (!loadCtx || !stressCtx || chartLoad) return;
+
+  chartLoad = new Chart(loadCtx, {
+    type: 'line',
+    data: { datasets: [{
+      label: 'Load (kN)', data: [],
+      borderColor: '#2e7d9a', backgroundColor: 'rgba(46,125,154,0.12)',
+      fill: true, tension: 0.15, pointRadius: 0, borderWidth: 2
+    }]},
+    options: {
+      responsive: true, animation: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { type: 'linear', title: { display: true, text: 'Displacement (mm)', color: '#4a5a6a', font: { size: 11 } }, grid: { color: '#eef3f8' } },
+        y: { title: { display: true, text: 'Load (kN)', color: '#4a5a6a', font: { size: 11 } }, grid: { color: '#eef3f8' } }
+      }
+    }
+  });
+
+  chartStress = new Chart(stressCtx, {
+    type: 'line',
+    data: { datasets: [{
+      label: 'Stress (MPa)', data: [],
+      borderColor: '#c62828', backgroundColor: 'rgba(198,40,40,0.10)',
+      fill: true, tension: 0.15, pointRadius: 0, borderWidth: 2
+    }]},
+    options: {
+      responsive: true, animation: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { type: 'linear', title: { display: true, text: 'Strain (%)', color: '#4a5a6a', font: { size: 11 } }, grid: { color: '#eef3f8' } },
+        y: { title: { display: true, text: 'Stress (MPa)', color: '#4a5a6a', font: { size: 11 } }, grid: { color: '#eef3f8' } }
+      }
+    }
+  });
+
+  redrawCharts();
+}
+
+function computeArea() {
+  const manual = parseFloat(val('u-area'));
+  if (!isNaN(manual) && manual > 0) return manual;
+  const d = parseFloat(val('u-dia'));
+  if (!isNaN(d) && d > 0) return Math.PI * d * d / 4;
+  return null;
+}
+
+function redrawCharts() {
+  if (!chartLoad || !chartStress) return;
+
+  const area = computeArea();
+  const gauge = parseFloat(val('u-gauge-curve')) || parseFloat(val('u-gauge')) || null;
+  const sorted = [...curveData].sort((a, b) => a.disp - b.disp);
+
+  const loadPts = sorted.map(p => ({ x: p.disp, y: p.load }));
+  const stressPts = sorted.map(p => ({
+    x: gauge ? (p.disp / gauge) * 100 : p.disp,
+    y: area ? (p.load * 1000) / area : p.load
+  }));
+
+  chartLoad.data.datasets[0].data = loadPts;
+  chartStress.data.datasets[0].data = stressPts;
+
+  // Trim any existing offset line
+  while (chartStress.data.datasets.length > 1) chartStress.data.datasets.pop();
+
+  const E = estimateModulus(stressPts);
+  if (E && stressPts.length > 2) {
+    const offsetPct = parseFloat(val('u-offset')) || 0.2;
+    const x0 = offsetPct;
+    const x1 = Math.max(...stressPts.map(p => p.x));
+    const slopePerPct = E / 100;
+    chartStress.data.datasets.push({
+      label: `${offsetPct}% offset`,
+      data: [{ x: x0, y: 0 }, { x: x1, y: slopePerPct * (x1 - x0) }],
+      borderColor: '#ef6c00', borderDash: [6, 4],
+      borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0
+    });
+  }
+
+  chartLoad.update();
+  chartStress.update();
+}
+
+function estimateModulus(stressPts) {
+  if (stressPts.length < 4) return null;
+  const maxStress = Math.max(...stressPts.map(p => p.y));
+  if (!isFinite(maxStress) || maxStress <= 0) return null;
+  const cutoff = maxStress * 0.4;
+  const linear = stressPts.filter(p => p.y > 0 && p.y < cutoff);
+  if (linear.length < 3) return null;
+
+  const n = linear.length;
+  const sx = linear.reduce((s, p) => s + p.x, 0);
+  const sy = linear.reduce((s, p) => s + p.y, 0);
+  const sxx = linear.reduce((s, p) => s + p.x * p.x, 0);
+  const sxy = linear.reduce((s, p) => s + p.x * p.y, 0);
+  const denom = n * sxx - sx * sx;
+  if (denom === 0) return null;
+  const slopePerPercent = (n * sxy - sx * sy) / denom;
+  return slopePerPercent * 100;
+}
+
+function addCurvePoint(disp = '', load = '') {
+  curveData.push({ disp: parseFloat(disp) || 0, load: parseFloat(load) || 0 });
+  renderCurveTable();
+  redrawCharts();
+}
+
+function renderCurveTable() {
+  const tbody = document.querySelector('#u-curve-table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const area = computeArea();
+  const gauge = parseFloat(val('u-gauge-curve')) || parseFloat(val('u-gauge')) || null;
+
+  curveData.forEach((p, i) => {
+    const stress = area ? (p.load * 1000) / area : '';
+    const strain = gauge ? (p.disp / gauge) * 100 : '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td><input type="number" step="0.001" value="${p.disp}" oninput="updateCurvePoint(${i},'disp',this.value)"></td>
+      <td><input type="number" step="0.001" value="${p.load}" oninput="updateCurvePoint(${i},'load',this.value)"></td>
+      <td style="color:#5a6b7c;">${stress ? stress.toFixed(2) : '—'}</td>
+      <td style="color:#5a6b7c;">${strain ? strain.toFixed(3) : '—'}</td>
+      <td><button class="btn btn-outline" style="padding:.15rem .5rem;font-size:.75rem;" onclick="removeCurvePoint(${i})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateCurvePoint(i, key, value) {
+  if (!curveData[i]) return;
+  curveData[i][key] = parseFloat(value) || 0;
+  redrawCharts();
+  const tbody = document.querySelector('#u-curve-table tbody');
+  const row = tbody?.rows[i];
+  if (!row) return;
+  const area = computeArea();
+  const gauge = parseFloat(val('u-gauge-curve')) || parseFloat(val('u-gauge')) || null;
+  row.cells[3].textContent = area ? ((curveData[i].load * 1000) / area).toFixed(2) : '—';
+  row.cells[4].textContent = gauge ? ((curveData[i].disp / gauge) * 100).toFixed(3) : '—';
+}
+
+function removeCurvePoint(i) {
+  curveData.splice(i, 1);
+  renderCurveTable();
+  redrawCharts();
+}
+
+function clearCurve() {
+  if (!confirm('Clear all curve data?')) return;
+  curveData = [];
+  renderCurveTable();
+  redrawCharts();
+  document.getElementById('u-curve-analysis').innerHTML = '';
+}
+
+function importPaste() {
+  const txt = document.getElementById('u-paste-area').value.trim();
+  if (!txt) return toast('Nothing to import', 'error');
+
+  const lines = txt.split(/\r?\n/).filter(l => l.trim());
+  let imported = 0, skipped = 0;
+
+  lines.forEach(line => {
+    const parts = line.split(/[,\t;]+/).map(s => s.trim()).filter(Boolean);
+    if (parts.length < 2) { skipped++; return; }
+    const disp = parseFloat(parts[0]);
+    const load = parseFloat(parts[1]);
+    if (isNaN(disp) || isNaN(load)) { skipped++; return; }
+    curveData.push({ disp, load });
+    imported++;
+  });
+
+  renderCurveTable();
+  redrawCharts();
+  toast(`Imported ${imported} points${skipped ? ` (${skipped} skipped)` : ''}`, 'success');
+}
+
+function loadDemoCurve() {
+  document.getElementById('u-dia').value = 12.5;
+  document.getElementById('u-gauge-curve').value = 50;
+  document.getElementById('u-gauge').value = 50;
+  document.getElementById('u-area').value = '';
+
+  curveData = [
+    { disp: 0.00, load: 0.0 },
+    { disp: 0.05, load: 12.0 },
+    { disp: 0.10, load: 24.5 },
+    { disp: 0.15, load: 35.8 },
+    { disp: 0.20, load: 44.2 },
+    { disp: 0.25, load: 48.6 },
+    { disp: 0.30, load: 51.0 },
+    { disp: 0.40, load: 51.8 },
+    { disp: 0.60, load: 52.2 },
+    { disp: 1.00, load: 53.5 },
+    { disp: 1.50, load: 55.8 },
+    { disp: 2.50, load: 60.2 },
+    { disp: 4.00, load: 65.5 },
+    { disp: 6.00, load: 70.1 },
+    { disp: 8.00, load: 73.4 },
+    { disp: 10.00, load: 75.2 },
+    { disp: 12.00, load: 74.0 },
+    { disp: 14.00, load: 70.5 },
+    { disp: 16.00, load: 65.0 },
+    { disp: 18.00, load: 58.0 },
+    { disp: 20.00, load: 50.0 },
+    { disp: 22.00, load: 42.0 }
+  ];
+
+  renderCurveTable();
+  redrawCharts();
+  toast('Demo data loaded — click "Analyze" to compute results', 'info', 4000);
+}
+
+function analyzeCurve() {
+  if (curveData.length < 4) return toast('Need at least 4 data points to analyze', 'error');
+
+  const area = computeArea();
+  const gauge = parseFloat(val('u-gauge-curve')) || parseFloat(val('u-gauge')) || null;
+  if (!area || !gauge) {
+    return toast('Enter specimen area (or diameter) and gauge length first', 'error');
+  }
+
+  const sorted = [...curveData].sort((a, b) => a.disp - b.disp);
+  const pts = sorted.map(p => ({
+    strain: p.disp / gauge,
+    stress: (p.load * 1000) / area
+  }));
+
+  const E = estimateModulus(pts.map(p => ({ x: p.strain * 100, y: p.stress })));
+  const E_GPa = E ? E / 1000 : null;
+
+  let uts = 0;
+  pts.forEach(p => { if (p.stress > uts) uts = p.stress; });
+
+  const offset = (parseFloat(val('u-offset')) || 0.2) / 100;
+  let yieldStress = null;
+  if (E) {
+    for (let i = 1; i < pts.length; i++) {
+      const p0 = pts[i - 1], p1 = pts[i];
+      const o0 = E * (p0.strain - offset);
+      const o1 = E * (p1.strain - offset);
+      if (p0.stress >= o0 && p1.stress < o1) {
+        const d0 = p0.stress - o0;
+        const d1 = p1.stress - o1;
+        const t = d0 / (d0 - d1);
+        yieldStress = p0.stress + t * (p1.stress - p0.stress);
+        break;
+      }
+    }
+    if (yieldStress === null) {
+      const upperLimit = uts * 0.95;
+      const candidates = pts.filter(p => p.stress > 0 && p.stress < upperLimit);
+      if (candidates.length) yieldStress = Math.min(...candidates.map(p => p.stress));
+    }
+  }
+
+  const last = pts[pts.length - 1];
+  const elongation = last ? last.strain * 100 : null;
+
+  if (yieldStress) document.getElementById('u-ys').value = yieldStress.toFixed(1);
+  document.getElementById('u-uts').value = uts.toFixed(1);
+  if (elongation) document.getElementById('u-elong').value = elongation.toFixed(1);
+  if (E_GPa) document.getElementById('u-mod').value = E_GPa.toFixed(1);
+
+  document.getElementById('u-curve-analysis').innerHTML = `
+    <div class="summary-bar">
+      <span>Modulus E: <strong>${E_GPa ? E_GPa.toFixed(1) + ' GPa' : '—'}</strong></span>
+      <span>0.2 % Yield: <strong>${yieldStress ? yieldStress.toFixed(1) + ' MPa' : '—'}</strong></span>
+      <span>UTS: <strong>${uts.toFixed(1)} MPa</strong></span>
+      <span>Elongation: <strong>${elongation ? elongation.toFixed(1) + ' %' : '—'}</strong></span>
+      <span>Points: <strong>${pts.length}</strong></span>
+    </div>
+    <p style="font-size:.8rem;color:#5a6b7c;margin-top:.4rem;">
+      Values auto-filled into the result fields below. Adjust manually if your lab uses different yield criteria (e.g., lower yield, 1 % offset, or Rp0.2 per ISO 6892-1).
+    </p>
+  `;
+
+  toast('✅ Curve analyzed — results filled in', 'success');
+}
+
 function evaluateUTM() {
   const ys = parseFloat(val('u-ys'));
   const uts = parseFloat(val('u-uts'));
@@ -1076,12 +1459,13 @@ async function saveUTM() {
     spec_uts_min: isNaN(utsMin) ? null : utsMin,
     spec_elong_min: isNaN(elMin) ? null : elMin,
     overall_status: overall,
-    checklist_progress: checklistCount('utm')
+    checklist_progress: checklistCount('utm'),
+    curve_data: curveData.length ? curveData : null
   };
 
   try {
     await api('/api/tests/utm', { method: 'POST', body: JSON.stringify(payload) });
-    toast('✅ UTM test saved', 'success');
+    toast('✅ UTM test saved (with curve)', 'success');
   } catch (err) {
     toast('Save failed: ' + err.message, 'error');
   }
@@ -1160,6 +1544,9 @@ async function generateReport() {
       out += `      RA    : ${u.reduction_of_area ?? '—'} %   Modulus: ${u.modulus ?? '—'} GPa\n`;
       out += `      Fracture: ${u.fracture_location || '—'}\n`;
       out += `      Status: ${u.overall_status || '—'}\n`;
+      if (Array.isArray(u.curve_data) && u.curve_data.length) {
+        out += `      Curve: ${u.curve_data.length} data points recorded\n`;
+      }
     });
 
     out += `\n══════════════════════════════════════════════════\n`;
@@ -1173,9 +1560,13 @@ async function generateReport() {
 }
 
 // ============================================================
-// AUDIT LOG
+// AUDIT
 // ============================================================
 async function loadAudit() {
+  const role = CURRENT_USER?.role;
+  if (!['reviewer','approver','admin'].includes(role)) {
+    return toast('Your role does not have access to the audit log.', 'error');
+  }
   try {
     const rows = await api('/api/audit');
     const tbody = document.querySelector('#audit-table tbody');
@@ -1212,6 +1603,7 @@ function initTabs() {
       const p = $('panel-' + tab.dataset.tab);
       if (p) p.classList.add('active');
       if (tab.dataset.tab === 'audit') loadAudit();
+      if (tab.dataset.tab === 'utm') setTimeout(initCurveCharts, 50);
     });
   });
 }
@@ -1221,20 +1613,19 @@ function initTabs() {
 // ============================================================
 (async function init() {
   const today = new Date().toISOString().slice(0,10);
-  ['h-date','m-date','c-date','u-date','r-date'].forEach(id => { const e = $(id); if (e) e.value = today; });
+  ['h-date','m-date','c-date','u-date','r-date'].forEach(id => {
+    const e = $(id); if (e) e.value = today;
+  });
 
-  // Build checklists
   buildChecklist('h-checklist', CHECKLISTS.hardness, 'hardness');
   buildChecklist('m-checklist', CHECKLISTS.micro, 'micro');
   buildChecklist('c-checklist', CHECKLISTS.comp, 'comp');
   buildChecklist('u-checklist', CHECKLISTS.utm, 'utm');
 
-  // Init tables
   for (let i = 0; i < 5; i++) addHardnessRow();
   initCompositionTable();
   initTabs();
 
-  // Auto-restore session
   if (TOKEN) {
     try {
       await refreshUser();
@@ -1245,7 +1636,6 @@ function initTabs() {
     }
   }
 
-  // Enter key handlers
   ['login-email','login-password'].forEach(id => {
     $(id).addEventListener('keypress', e => { if (e.key === 'Enter') doLogin(); });
   });
