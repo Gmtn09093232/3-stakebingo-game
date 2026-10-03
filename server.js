@@ -3,6 +3,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 
@@ -35,7 +36,20 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('dev'));
-app.use(express.static(path.join(__dirname, 'public')));
+
+// ============================================================
+// STATIC FILE SERVING (works with OR without a public/ folder)
+// ============================================================
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const HAS_PUBLIC = fs.existsSync(PUBLIC_DIR);
+
+if (HAS_PUBLIC) {
+  app.use(express.static(PUBLIC_DIR));
+  console.log(`📁 Serving static files from: ${PUBLIC_DIR}`);
+} else {
+  console.log(`📁 No public/ folder — serving from project root: ${__dirname}`);
+}
+app.use(express.static(__dirname));
 
 // ============================================================
 // AUTH MIDDLEWARE
@@ -59,7 +73,6 @@ async function requireAuth(req, res, next) {
   }
 }
 
-// ✅ FIXED: NOT async on the outer function — returns a middleware
 function requireRole(...roles) {
   return async (req, res, next) => {
     try {
@@ -130,9 +143,7 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
 // ============================================================
 app.get('/api/samples', requireAuth, async (_req, res) => {
   const { data, error } = await db
-    .from('samples')
-    .select('*')
-    .order('created_at', { ascending: false });
+    .from('samples').select('*').order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
@@ -212,11 +223,7 @@ app.post('/api/tests/hardness', requireAuth, async (req, res) => {
 app.get('/api/tests/hardness', requireAuth, async (_req, res) => {
   const { data, error } = await db
     .from('hardness_tests')
-    .select(`
-      *,
-      hardness_readings (*),
-      samples (sample_code, material_grade)
-    `)
+    .select(`*, hardness_readings (*), samples (sample_code, material_grade)`)
     .order('created_at', { ascending: false })
     .limit(100);
   if (error) return res.status(500).json({ error: error.message });
@@ -308,11 +315,7 @@ app.post('/api/tests/composition', requireAuth, async (req, res) => {
 app.get('/api/tests/composition', requireAuth, async (_req, res) => {
   const { data, error } = await db
     .from('composition_tests')
-    .select(`
-      *,
-      composition_elements (*),
-      samples (sample_code, material_grade)
-    `)
+    .select(`*, composition_elements (*), samples (sample_code, material_grade)`)
     .order('created_at', { ascending: false })
     .limit(100);
   if (error) return res.status(500).json({ error: error.message });
@@ -367,17 +370,15 @@ app.get('/api/tests/utm', requireAuth, async (_req, res) => {
 });
 
 // ============================================================
-// AUDIT LOG (reviewer / approver / admin only)
+// AUDIT LOG
 // ============================================================
 app.get('/api/audit',
   requireAuth,
-  requireRole('reviewer', 'approver', 'admin'),   // ✅ now returns middleware
+  requireRole('reviewer', 'approver', 'admin'),
   async (_req, res) => {
     const { data, error } = await db
-      .from('audit_log')
-      .select('*')
-      .order('changed_at', { ascending: false })
-      .limit(200);
+      .from('audit_log').select('*')
+      .order('changed_at', { ascending: false }).limit(200);
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
   }
@@ -410,10 +411,16 @@ app.get('/api/reports/:sampleId', requireAuth, async (req, res) => {
 });
 
 // ============================================================
-// FALLBACK: SPA
+// FALLBACK: SPA — serve index.html from wherever it lives
 // ============================================================
 app.use((_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  const candidates = [
+    path.join(__dirname, 'public', 'index.html'),
+    path.join(__dirname, 'index.html')
+  ];
+  const target = candidates.find(p => fs.existsSync(p));
+  if (target) return res.sendFile(target);
+  res.status(404).send('index.html not found. Place it at the project root next to server.js.');
 });
 
 // ============================================================
@@ -421,6 +428,6 @@ app.use((_req, res) => {
 // ============================================================
 app.listen(PORT, () => {
   console.log(`\n🚀 Materials Lab server running`);
-  console.log(`   → http://localhost:${PORT}\n`);
+  console.log(`   → http://localhost:${PORT}`);
   console.log(`   Supabase URL: ${SUPABASE_URL}\n`);
 });
