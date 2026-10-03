@@ -23,12 +23,10 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
-// Anon client — used only to verify user JWTs
 const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
 
-// Admin client — service role, bypasses RLS, used for all DB writes
 const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
@@ -61,15 +59,21 @@ async function requireAuth(req, res, next) {
   }
 }
 
-async function requireRole(...roles) {
+// ✅ FIXED: NOT async on the outer function — returns a middleware
+function requireRole(...roles) {
   return async (req, res, next) => {
-    const { data: profile } = await db
-      .from('profiles').select('role').eq('id', req.user.id).single();
-    if (!profile || !roles.includes(profile.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
+    try {
+      const { data: profile } = await db
+        .from('profiles').select('role').eq('id', req.user.id).single();
+      if (!profile || !roles.includes(profile.role)) {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
+      req.profile = profile;
+      next();
+    } catch (err) {
+      console.error('requireRole error:', err);
+      res.status(500).json({ error: 'Role check failed' });
     }
-    req.profile = profile;
-    next();
   };
 }
 
@@ -365,15 +369,19 @@ app.get('/api/tests/utm', requireAuth, async (_req, res) => {
 // ============================================================
 // AUDIT LOG (reviewer / approver / admin only)
 // ============================================================
-app.get('/api/audit', requireAuth, requireRole('reviewer', 'approver', 'admin'), async (_req, res) => {
-  const { data, error } = await db
-    .from('audit_log')
-    .select('*')
-    .order('changed_at', { ascending: false })
-    .limit(200);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
-});
+app.get('/api/audit',
+  requireAuth,
+  requireRole('reviewer', 'approver', 'admin'),   // ✅ now returns middleware
+  async (_req, res) => {
+    const { data, error } = await db
+      .from('audit_log')
+      .select('*')
+      .order('changed_at', { ascending: false })
+      .limit(200);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  }
+);
 
 // ============================================================
 // CONSOLIDATED REPORT
@@ -404,7 +412,7 @@ app.get('/api/reports/:sampleId', requireAuth, async (req, res) => {
 // ============================================================
 // FALLBACK: SPA
 // ============================================================
-app.get('*', (_req, res) => {
+app.use((_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
