@@ -1,10 +1,16 @@
 {
+  "name": "materials-lab",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
   "dependencies": {
-    "@supabase/supabase-js": "^2.105.4",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "express-session": "^1.19.0",
-    "multer": "^2.1.1",
-    "socket.io": "^4.8.3"
+    "@supabase/supabase-js": "^2.45.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "morgan": "^1.10.0"
   }
 }
